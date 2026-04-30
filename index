@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>TRUPER CDNA+ | v199.0 PUSH REAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-messaging-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --truper: #E07000;
+            --truper-light: #F08C3E;
+            --truper-glow: rgba(224,112,0,0.5);
+            --border-subtle: rgba(224,112,0,0.2);
+            --card-bg: rgba(12,12,18,0.85);
+            --red: #E5484D;
+            --green-on: #4CAF50;
+            --text-primary: #EDEDED;
+            --text-secondary: #9CA3AF;
+            --surface-dark: #050508;
+            --header-bg: rgba(5,5,8,0.92);
+        }
+        body { background: var(--surface-dark); color: var(--text-primary); overflow: hidden; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 0px; height: 0px; background: transparent; }
+        * { scrollbar-width: none; }
+        #bg-canvas { position: fixed; inset: 0; z-index: -2; display: block; will-change: transform; opacity: 0.4; pointer-events: none; }
+        #main-container { height: 100vh; overflow-y: auto; display: none; padding-bottom: 80px; scroll-behavior: smooth; }
+        .glass-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border-subtle); border-radius: 24px; transition: transform 0.2s ease; }
+        .custom-toast { position: fixed; bottom: 24px; left: 20px; right: 20px; background: rgba(8,8,12,0.96); backdrop-filter: blur(24px); border-left: 3px solid var(--truper); border-radius: 16px; padding: 14px 18px; z-index: 20000; transform: translateY(120%); transition: transform 0.3s; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+        .custom-toast.show { transform: translateY(0); }
+        .modal-glass { position: fixed; inset: 0; background: rgba(0,0,0,0.94); backdrop-filter: blur(28px); display: none; align-items: center; justify-content: center; z-index: 10000; padding: 20px; }
+        header { position: sticky; top: 0; padding: 12px 20px; background: var(--header-bg); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border-subtle); z-index: 1100; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .nav-pill { padding: 8px 18px; border-radius: 40px; font-size: 13px; font-weight: 600; cursor: pointer; background: rgba(255,255,255,0.04); border: 1px solid rgba(224,112,0,0.3); color: var(--text-secondary); transition: 0.2s; white-space: nowrap; }
+        .nav-pill.active { background: var(--truper); color: white; border-color: var(--truper); box-shadow: 0 0 12px var(--truper-glow); }
+        .status-btn { flex: 1; text-align: center; padding: 8px 0; font-size: 14px; cursor: pointer; border-radius: 40px; transition: 0.1s; }
+        .status-btn.active { background: var(--truper); color: white; box-shadow: 0 0 10px var(--truper-glow); }
+        .area-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 16px 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .comment-section { margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; }
+        .comment-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .comment-thread { background: rgba(0,0,0,0.3); border-radius: 20px; padding: 14px; margin-top: 12px; display: none; }
+        .comment-thread.open { display: block; }
+        .comment-item { background: rgba(255,255,255,0.02); border-radius: 16px; padding: 12px; margin-bottom: 10px; border-left: 2px solid var(--truper); }
+        .reply-item { margin-left: 30px; margin-top: 10px; background: rgba(255,255,255,0.02); border-radius: 14px; padding: 10px; border-left: 2px solid var(--truper-light); }
+        .reply-img, .comment-img { max-width: 80px; max-height: 80px; border-radius: 8px; margin-top: 6px; cursor: pointer; }
+        .reply-form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+        .reply-input { flex: 1; padding: 6px 12px; border-radius: 30px; background: rgba(20,20,28,0.88); border: 1px solid var(--border-subtle); color: white; font-size: 12px; }
+        .reply-btn { background: none; border: none; color: var(--truper-light); font-size: 11px; cursor: pointer; margin-top: 5px; }
+        .delete-comment { background: none; border: none; color: var(--red); font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 20px; }
+        .comment-input-wrapper { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .comment-input-wrapper input { flex: 1; padding: 10px 16px; border-radius: 40px; background: rgba(20,20,28,0.88); border: 1px solid var(--border-subtle); color: white; font-size: 14px; min-width: 120px; }
+        .comment-input-wrapper button { background: var(--truper); border: none; width: 48px; border-radius: 40px; font-size: 18px; color: white; cursor: pointer; }
+        .history-button { background: rgba(255,255,255,0.04); padding: 6px 14px; border-radius: 40px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-action { background: var(--truper); color: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.1s; }
+        .online-indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; margin-left: 8px; box-shadow: 0 0 6px #4CAF50; animation: pulse 1.5s infinite; vertical-align: middle; }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+        .like-btn, .dislike-btn { 
+            cursor: pointer; font-weight: 600; padding: 5px 14px; border-radius: 40px; transition: all 0.2s ease; 
+            display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+            background: rgba(255,255,255,0.04);
+        }
+        .like-btn.active { background: var(--green-on); color: white; box-shadow: 0 0 14px var(--green-on); }
+        .dislike-btn.active { background: var(--red); color: white; box-shadow: 0 0 14px var(--red); }
+        .task-counter { font-size: 14px; font-weight: 700; color: var(--truper-light); background: rgba(224,112,0,0.12); padding: 5px 14px; border-radius: 40px; display: inline-block; margin-top: 8px; }
+        .chart-container { position: relative; width: 90px; height: 90px; margin: 0 auto; }
+        canvas#areaChartCanvas { filter: drop-shadow(0 0 12px var(--truper-glow)); animation: chartPulse 2s ease-in-out infinite; }
+        @keyframes chartPulse { 0% { filter: drop-shadow(0 0 5px var(--truper-glow)); } 50% { filter: drop-shadow(0 0 18px var(--truper-glow)); } 100% { filter: drop-shadow(0 0 5px var(--truper-glow)); } }
+        .flex-stats { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; max-width: 1100px; margin: 0 auto; }
+        .reaction-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 14px 0 10px; }
+        .media-preview-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .media-preview-item { position: relative; width: 75px; height: 75px; border-radius: 14px; overflow: hidden; background: rgba(0,0,0,0.5); border: 1px solid var(--border-subtle); cursor: pointer; transition: 0.1s; }
+        .remove-media { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); border-radius: 20px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; color: white; z-index: 2; }
+        .file-attachment-btn { background: rgba(255,255,255,0.04); padding: 8px 18px; border-radius: 40px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        input, textarea { background: rgba(20,20,28,0.88); border: 1px solid var(--border-subtle); border-radius: 32px; padding: 12px 18px; color: white; font-size: 15px; outline: none; width: 100%; font-family: 'Inter', sans-serif; }
+        textarea { resize: none; }
+        .image-viewer { position: fixed; inset: 0; background: rgba(0,0,0,0.96); backdrop-filter: blur(40px); z-index: 15000; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
+        .image-viewer img { max-width: 90%; max-height: 80%; object-fit: contain; border-radius: 16px; transition: transform 0.2s ease; cursor: zoom-in; }
+        .image-viewer .viewer-controls { display: flex; gap: 20px; margin-top: 10px; }
+        .viewer-btn { background: rgba(0,0,0,0.6); border: none; color: white; padding: 8px 20px; border-radius: 40px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .viewer-btn:hover { background: var(--truper); }
+        .auth-tabs { display: flex; gap: 12px; margin-bottom: 24px; }
+        .auth-tab { flex: 1; text-align: center; padding: 10px; border-radius: 40px; cursor: pointer; background: rgba(255,255,255,0.03); transition: 0.2s; font-weight: 600; }
+        .auth-tab.active { background: var(--truper); color: white; }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .role-selector { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin: 15px 0; }
+        .role-option { padding: 8px; text-align: center; border-radius: 40px; background: rgba(255,255,255,0.03); cursor: pointer; font-size: 13px; }
+        .role-option.selected { background: var(--truper); color: white; }
+        .orange-header { background: linear-gradient(135deg, #E07000 0%, #F08C3E 50%, #E07000 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 15px rgba(224,112,0,0.4); font-weight: 800; letter-spacing: 0.5px; }
+        .admin-panel-btn { background: rgba(229,72,77,0.15); color: var(--red); border: 1px solid rgba(229,72,77,0.3); padding: 6px 12px; border-radius: 40px; cursor: pointer; font-size: 12px; margin-left: 10px; }
+        .password-wrapper { position: relative; width: 100%; margin-bottom: 16px; }
+        .password-wrapper input { padding-right: 48px; }
+        .toggle-password { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary); font-size: 18px; background: none; border: none; }
+        .logout-btn { background: rgba(229,72,77,0.15); border: 1px solid rgba(229,72,77,0.5); border-radius: 40px; padding: 6px 16px; color: var(--red); font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; text-shadow: 0 0 4px var(--red); box-shadow: 0 0 6px rgba(229,72,77,0.3); }
+        .bell-icon { position: relative; cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .bell-icon svg { width: 22px; height: 22px; stroke: var(--text-primary); stroke-width: 1.5; fill: none; }
+        .notification-badge { position: absolute; top: -6px; right: -8px; background: var(--red); color: white; border-radius: 20px; padding: 2px 5px; font-size: 9px; font-weight: bold; min-width: 16px; text-align: center; }
+        .notification-popup { position: absolute; top: 55px; right: 20px; width: 320px; max-width: calc(100vw - 30px); background: rgba(16,16,22,0.96); backdrop-filter: blur(24px); border-radius: 20px; border: 1px solid var(--border-subtle); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1200; display: none; flex-direction: column; overflow: hidden; }
+        .notification-header { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .notification-list { max-height: 400px; overflow-y: auto; }
+        .notification-item { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
+        .notification-item.unread { background: rgba(224,112,0,0.08); border-left: 3px solid var(--truper); }
+        .no-notifications { padding: 30px; text-align: center; opacity: 0.6; font-size: 14px; }
+        @media (max-width: 768px) { .flex-stats { flex-direction: column; } .logout-btn { align-self: flex-end; } header { flex-direction: column; align-items: stretch; } }
+        @media (max-width: 480px) { .like-btn, .dislike-btn { padding: 3px 10px; font-size: 11px; } }
+        .zoom-out-effect { animation: zoomOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes zoomOut { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.85); opacity: 0; visibility: hidden; } }
+        .tv-off-effect { animation: tvOff 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes tvOff { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.2); opacity: 0; visibility: hidden; } }
+    </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="imageViewer" class="image-viewer">
+    <img id="viewerImage" src="">
+    <div class="viewer-controls">
+        <button class="viewer-btn" id="downloadImageBtn">⬇️ Descargar</button>
+        <button class="viewer-btn" onclick="closeImageViewer()">✕ Cerrar</button>
+    </div>
+</div>
+<div id="customToast" class="custom-toast"><span>●</span><span id="toastMessage"></span><button class="toast-close" onclick="hideToast()">OK</button></div>
+<div id="confirm-modal" class="modal-glass"><div class="glass-card" style="padding:28px;"><p id="confirm-message"></p><div style="display:flex; gap:12px; margin-top:24px;"><button id="confirm-cancel" class="btn-action">Cancelar</button><button id="confirm-ok" class="btn-action">Aceptar</button></div></div></div>
+<div id="delete-modal" class="modal-glass"><div class="glass-card" style="padding:28px;"><p>Eliminar reporte</p><div style="display:flex; gap:12px; margin-top:20px;"><button onclick="closeDeleteModal()" class="btn-action">Cancelar</button><button id="confirm-delete-btn" class="btn-action">Borrar</button></div></div></div>
+<div id="delete-comment-modal" class="modal-glass"><div class="glass-card" style="padding:28px;"><p>Eliminar comentario</p><div style="display:flex; gap:12px; margin-top:20px;"><button onclick="closeDeleteCommentModal()" class="btn-action">Cancelar</button><button id="confirm-delete-comment-btn" class="btn-action">Borrar</button></div></div></div>
+<div id="history-modal" class="modal-glass"><div class="glass-card" style="width:90%; max-width:400px; padding:24px;"><h3>📋 Historial</h3><div id="history-modal-content" style="max-height:350px; overflow-y:auto;"></div><button onclick="closeHistoryModal()" class="btn-action" style="margin-top:20px;">Cerrar</button></div></div>
+<div id="notification-popup" class="notification-popup"><div class="notification-header">🔔 Notificaciones<button class="mark-all-read" onclick="markAllNotificationsRead()">✓ Marcar todas</button></div><div id="notification-list" class="notification-list"></div></div>
+
+<div id="login-screen" class="modal-glass" style="display: flex;">
+    <div class="glass-card" id="login-card" style="width:100%; max-width:460px; padding:32px 24px; text-align:center;">
+        <h1 style="font-family:'Orbitron';">TRUPER <span style="color:var(--truper);">CDNA+</span></h1>
+        <div class="auth-tabs"><div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">🔐 INGRESAR</div><div id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">📝 REGISTRARSE</div></div>
+        <div id="login-form" class="auth-form active">
+            <input type="text" id="login-username" placeholder="INGRESE NOMBRE" style="margin-bottom:16px;">
+            <div class="password-wrapper"><input type="password" id="login-password" placeholder="CONTRASEÑA"><button type="button" class="toggle-password" onclick="togglePasswordVisibility('login-password', this)">👁️</button></div>
+            <button id="do-login-btn" class="btn-action" style="width:100%;">INGRESAR</button>
+        </div>
+        <div id="register-form" class="auth-form">
+            <input type="text" id="reg-username" placeholder="NUEVO USUARIO" style="margin-bottom:16px;">
+            <div class="password-wrapper"><input type="password" id="reg-password" placeholder="CONTRASEÑA"><button type="button" class="toggle-password" onclick="togglePasswordVisibility('reg-password', this)">👁️</button></div>
+            <div style="font-size:13px; text-align:left;">Selecciona tu puesto:</div><div id="reg-role-selector" class="role-selector"></div>
+            <button id="do-register-btn" class="btn-action" style="width:100%; margin-top:16px;">CREAR CUENTA</button>
+        </div>
+    </div>
+</div>
+
+<div id="main-container">
+    <header>
+        <div><h2 style="font-family:'Orbitron';">TRUPER <span style="color:var(--truper);">CDNA+</span></h2><p id="header-subtitle" class="orange-header" style="font-size:14px;"></p></div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+            <div class="bell-icon" id="bell-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z"/><path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21"/></svg><span id="notification-counter" class="notification-badge" style="display:none;">0</span></div>
+            <div id="admin-panel-container" style="display: none;"><button onclick="adminClearAllTasks()" class="admin-panel-btn">🧹 LIMPIAR TODO</button><button onclick="adminManageUsers()" class="admin-panel-btn">👥 ADMINISTRAR USUARIOS</button></div>
+            <button onclick="logoutWithAnimation()" class="logout-btn">SALIR</button>
+        </div>
+    </header>
+    <div class="flex-stats">
+        <div class="glass-card" style="padding:18px; flex:1; display:flex; align-items:center; gap:16px;">
+            <div class="chart-container"><canvas id="areaChartCanvas"></canvas><div id="chart-percent-text" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Orbitron'; font-weight:800; font-size:18px;">0%</div></div>
+            <div><p style="font-size:13px;">EFICIENCIA</p><p style="font-size:15px; font-weight:800; color:var(--truper-light);">Tareas finalizadas</p><div id="task-counter" class="task-counter">0 de 0</div></div>
+        </div>
+        <div class="glass-card" style="padding:18px; flex:2.5;">
+            <textarea id="new-task-text" placeholder="¿Qué está pasando? Comparte tu novedad... (Pega imágenes con Ctrl+V)" style="height:60px;"></textarea>
+            <div style="display:flex; justify-content:space-between; margin-top:12px; gap:10px; flex-wrap:wrap;">
+                <div class="file-attachment-btn" onclick="document.getElementById('multiFileInput').click();">📎 Adjuntar</div>
+                <input type="file" id="multiFileInput" multiple accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,audio/*" style="display:none;">
+                <button onclick="publishTask()" class="btn-action">PUBLICAR</button>
+            </div>
+            <div id="mediaPreviewContainer" class="media-preview-grid"></div>
+        </div>
+    </div>
+    <div id="area-tabs" class="area-scroll"></div>
+    <div id="feed-container" style="max-width:780px; margin:0 auto; padding:0 16px 30px;"></div>
+</div>
+
+<script>
+    // ==================== INICIALIZACIÓN ====================
+    const DEPARTMENTS = ['GERENTE','JEFE DE TURNO','SUPERVISOR','MESA DE CONTROL','FACTURACIÓN','COORDINADOR','BACKUP'];
+    // ==================== FIREBASE CONFIG (CORRECTO ✅) ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDIqzMDppwu5v3pDNHHaIzwvQ--MuNl4E0",
+  authDomain: "cdna-truper.firebaseapp.com",
+  databaseURL: "https://cdna-truper-default-rtdb.firebaseio.com",
+  projectId: "cdna-truper",
+  storageBucket: "cdna-truper.firebasestorage.app",
+  messagingSenderId: "348695321255",
+  appId: "1:348695321255:web:aa405b4406c1ef4287d982"
+};
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+const db = firebase.database();
+
+let messaging = null;
+try {
+  messaging = firebase.messaging();
+  console.log("✅ Firebase Messaging inicializado");
+} catch (e) {
+  console.warn("⚠️ Messaging no disponible", e);
+}
+``
+
+    const db = firebase.database();
+    let messaging = null;
+    try {
+        messaging = firebase.messaging();
+        console.log("Firebase Messaging inicializado");
+    } catch(e) {
+        console.warn("Firebase Messaging no disponible (no configurado)", e);
+    }
+    
+    let currentUser="", currentRole="GERENTE", currentArea="GERENTE", tasksDB={}, chartInstance=null, presenceRef=null, notificationsRef=null;
+    let inactivityTimer=null; const SESSION_TIMEOUT=40*60*1000;
+    let selectedFiles=[], isAdmin=false, unreadCount=0, notificationsList=[], popupVisible=false, deleteTargetId=null, deleteCommentTarget={};
+    const STORAGE_KEY = 'truper_last_username';
+    let audioCtx=null;
+    
+    function playBeep(f,d,v){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); const n=audioCtx.currentTime; const g=audioCtx.createGain(); g.gain.setValueAtTime(v,n); g.gain.exponentialRampToValueAtTime(0.0001,n+d); const o=audioCtx.createOscillator(); o.frequency.value=f; o.type='sine'; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(n+d); if(audioCtx.state==='suspended') audioCtx.resume(); }catch(e){} }
+    function playLikeSound(){ playBeep(880,0.05,0.12); } function playDislikeSound(){ playBeep(440,0.06,0.12); } function playPublishSound(){ playBeep(1200,0.08,0.15); } function playCommentSound(){ playBeep(660,0.05,0.12); } function playPatternSuccess(){ playBeep(1000,0.08,0.15); } function playNotificationSound(){ playBeep(740,0.04,0.1); }
+    
+    function saveUserName(n){ if(n) localStorage.setItem(STORAGE_KEY,n); } function loadUserName(){ return localStorage.getItem(STORAGE_KEY)||''; }
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>]/g,m=>{ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    function showToast(m,e=true){ const t=document.getElementById('customToast'); document.getElementById('toastMessage').innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+    function hideToast(){ document.getElementById('customToast').classList.remove('show'); }
+    function showConfirmModal(msg,onConfirm){ const m=document.getElementById('confirm-modal'); document.getElementById('confirm-message').innerText=msg; const ok=document.getElementById('confirm-ok'), cancel=document.getElementById('confirm-cancel'), oldOk=ok.onclick; ok.onclick=()=>{ m.style.display='none'; onConfirm(); ok.onclick=oldOk; }; cancel.onclick=()=>m.style.display='none'; m.style.display='flex'; }
+    
+    // ==================== NOTIFICACIONES PUSH (con manejo de errores) ====================
+    async function initPushNotifications() {
+        if (!messaging) {
+            console.log("FCM no disponible, omitiendo push");
+            return;
+        }
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+            console.log('Push no soportado por navegador');
+            return;
+        }
+        try {
+            let permission = Notification.permission;
+            if (permission !== 'granted') {
+                permission = await Notification.requestPermission();
+            }
+            if (permission !== 'granted') {
+                console.log("Permiso de notificaciones denegado");
+                return;
+            }
+            
+            let registration;
+            try {
+                registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                console.log('Service Worker registrado');
+            } catch(swErr) {
+                console.warn("No se pudo registrar el Service Worker. Asegúrate de que firebase-messaging-sw.js existe en la raíz.", swErr);
+                return;
+            }
+            
+            const token = await messaging.getToken({
+                vapidKey: 'BHDriFbrIHZxLK67Lpenkcxh1q7ttlzslLt2TeF_Q24smLsts65wwAyYYF9FXs4fzG2jK4YgPpjHsRfF6YPMXYw',
+                serviceWorkerRegistration: registration
+            });
+            if (token) {
+                await db.ref(`push_tokens/${currentUser}`).set({
+                    token: token,
+                    lastActive: Date.now()
+                });
+                console.log('✅ Push activado correctamente. Token:', token);
+            }
+        } catch (error) {
+            console.error('Error en initPushNotifications (no bloquea):', error);
+        }
+    }
+    
+    // ==================== NOTIFICACIONES INTERNAS ====================
+    function addNotification(notif){ if(!currentUser) return; db.ref(`notifications/${currentUser}`).push({...notif, read:false, timestamp:Date.now()}); playNotificationSound(); }
+    function loadNotifications(){ if(!currentUser) return; notificationsRef=db.ref(`notifications/${currentUser}`).orderByChild('timestamp').limitToLast(50); notificationsRef.on('value',(snap)=>{ notificationsList=[]; snap.forEach(c=>notificationsList.push({id:c.key,...c.val()})); notificationsList.reverse(); unreadCount=notificationsList.filter(n=>!n.read).length; updateNotificationBadge(); if(popupVisible) renderNotificationPopup(); }); }
+    function updateNotificationBadge(){ const c=document.getElementById('notification-counter'); if(unreadCount>0){ c.innerText=unreadCount>99?'99+':unreadCount; c.style.display='block'; } else c.style.display='none'; }
+    function renderNotificationPopup(){ const cont=document.getElementById('notification-list'); if(!cont) return; if(notificationsList.length===0){ cont.innerHTML='<div class="no-notifications">No hay notificaciones</div>'; return; } cont.innerHTML=''; notificationsList.forEach(notif=>{ const div=document.createElement('div'); div.className=`notification-item ${!notif.read?'unread':''}`; div.onclick=()=>{ if(notif.taskId){ const el=document.getElementById(`task-${notif.taskId}`); if(el) el.scrollIntoView({behavior:'smooth',block:'center'}); } }; div.innerHTML=`<div class="notification-text"><div>${escapeHtml(notif.message)}</div><div class="notification-time">${new Date(notif.timestamp).toLocaleString()}</div></div>${!notif.read?`<button class="mark-read-btn" data-id="${notif.id}" style="background:none; border:none; color:var(--truper); cursor:pointer;">✓</button>`:''}`; cont.appendChild(div); }); document.querySelectorAll('.mark-read-btn').forEach(btn=>{ btn.onclick=e=>{ e.stopPropagation(); const id=btn.getAttribute('data-id'); db.ref(`notifications/${currentUser}/${id}`).update({read:true}); }; }); }
+    function markAllNotificationsRead(){ if(unreadCount===0) return; const updates={}; notificationsList.filter(n=>!n.read).forEach(n=>{ updates[`notifications/${currentUser}/${n.id}/read`]=true; }); db.ref().update(updates); }
+    function toggleNotificationPopup(){ const p=document.getElementById('notification-popup'); if(popupVisible){ p.style.display='none'; popupVisible=false; }else{ renderNotificationPopup(); p.style.display='flex'; popupVisible=true; if(unreadCount>0){ const updates={}; notificationsList.filter(n=>!n.read).forEach(n=>{ updates[`notifications/${currentUser}/${n.id}/read`]=true; }); db.ref().update(updates); } } }
+    function closePopupOnClickOutside(e){ const p=document.getElementById('notification-popup'), b=document.getElementById('bell-icon'); if(popupVisible && !p.contains(e.target) && !b.contains(e.target)){ p.style.display='none'; popupVisible=false; } }
+    window.markAllNotificationsRead = markAllNotificationsRead;
+    
+    // ==================== ADMIN ====================
+    window.adminClearAllTasks=async function(){ if(!isAdmin){ showToast("No tienes permisos",true); return; } showConfirmModal("⚠️ ¿ELIMINAR TODAS LAS PUBLICACIONES?", async()=>{ await db.ref('tasks').remove(); tasksDB={}; await renderFeed(); updateAreaChartAndCounter(); updateAreaNavCounters(); showToast("✅ Eliminadas",false); }); };
+    window.adminManageUsers=async function(){ if(!isAdmin){ showToast("No tienes permisos",true); return; } const snap=await db.ref('users').once('value'); const users=snap.val()||{}; let list=Object.keys(users).map(u=>({name:u,role:users[u].role})); if(list.length===0){ showToast("No hay usuarios",true); return; } let opts=list.map((u,i)=>`${i+1}. ${u.name} (${u.role})`).join('\n'); const input=prompt("👥 USUARIOS:\n\n"+opts+"\n\nNúmero a eliminar:"); if(!input) return; const idx=parseInt(input)-1; if(idx>=0 && idx<list.length){ const toDel=list[idx].name; showConfirmModal(`Eliminar a ${toDel}?`, async()=>{ await db.ref(`users/${toDel}`).remove(); if(toDel===currentUser){ showToast("Cerrando sesión...",true); setTimeout(()=>logoutWithAnimation(),1500); }else showToast(`✅ ${toDel} eliminado`,false); }); }else showToast("Número inválido",true); };
+    
+    // ==================== MULTIMEDIA Y PEGAR ====================
+    document.getElementById('multiFileInput').addEventListener('change',async function(e){ const files=Array.from(e.target.files); for(const f of files){ if(f.size>10*1024*1024){ showToast(`Archivo ${f.name} >10MB`,true); continue; } const reader=new FileReader(); reader.onload=ev=>{ selectedFiles.push({dataURL:ev.target.result,type:f.type,name:f.name}); updateMediaPreview(); }; reader.readAsDataURL(f); } e.target.value=''; });
+    function updateMediaPreview(){ const c=document.getElementById('mediaPreviewContainer'); c.innerHTML=''; selectedFiles.forEach((f,i)=>{ const d=document.createElement('div'); d.className='media-preview-item'; if(f.type.startsWith('image/')){ const img=document.createElement('img'); img.src=f.dataURL; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; d.appendChild(img); }else{ const s=document.createElement('span'); s.innerHTML='📄'; s.style.fontSize='28px'; d.appendChild(s); } const rm=document.createElement('div'); rm.className='remove-media'; rm.innerHTML='✕'; rm.onclick=()=>{ selectedFiles.splice(i,1); updateMediaPreview(); }; d.appendChild(rm); c.appendChild(d); }); }
+    function resetMediaSelection(){ selectedFiles=[]; updateMediaPreview(); }
+    
+    const mainTextarea = document.getElementById('new-task-text');
+    mainTextarea.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const file = item.getAsFile();
+                if (file.size > 10 * 1024 * 1024) { showToast("Imagen >10MB", true); return; }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    selectedFiles.push({ dataURL: ev.target.result, type: file.type, name: 'pegado.png' });
+                    updateMediaPreview();
+                };
+                reader.readAsDataURL(file);
+                e.preventDefault();
+                break;
+            }
+        }
+    });
+    
+    // ==================== RESPUESTAS A COMENTARIOS ====================
+    function addReplyToComment(taskId, parentCommentId, text, imageDataURL=null) {
+        const reply = { u: currentUser, v: text, t: new Date().toLocaleTimeString(), ts: Date.now(), img: imageDataURL || null };
+        db.ref(`tasks/${taskId}/comments/${parentCommentId}/replies`).push(reply);
+        const task = tasksDB[taskId];
+        if(task && task.comments && task.comments[parentCommentId] && task.comments[parentCommentId].u !== currentUser) {
+            addNotification({ title: "Respuesta", message: `${currentUser} respondió a tu comentario` });
+        }
+    }
+    
+    function showReplyForm(taskId, commentId, commentElement) {
+        let existing = commentElement.querySelector('.reply-form');
+        if(existing) { existing.remove(); return; }
+        const form = document.createElement('div');
+        form.className = 'reply-form';
+        form.innerHTML = `<input type="text" placeholder="Escribe tu respuesta..." class="reply-input"><button class="reply-btn-submit">📎</button><button class="reply-btn-submit" style="background:var(--green-on);">Enviar</button><div class="reply-preview" style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;"></div>`;
+        const textInput = form.querySelector('.reply-input');
+        const attachBtn = form.querySelectorAll('.reply-btn-submit')[0];
+        const sendBtn = form.querySelectorAll('.reply-btn-submit')[1];
+        const previewDiv = form.querySelector('.reply-preview');
+        let pendingImage = null;
+        let previewElement = null;
+        
+        attachBtn.onclick = () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                if(file.size > 10*1024*1024) { showToast("Imagen >10MB", true); return; }
+                const reader = new FileReader();
+                reader.onload = (ev) => { 
+                    pendingImage = ev.target.result;
+                    if(previewElement) previewElement.remove();
+                    previewElement = document.createElement('div');
+                    previewElement.style.position = 'relative';
+                    previewElement.style.width = '60px';
+                    previewElement.style.height = '60px';
+                    previewElement.style.borderRadius = '8px';
+                    previewElement.style.overflow = 'hidden';
+                    previewElement.style.border = '1px solid var(--border-subtle)';
+                    const img = document.createElement('img');
+                    img.src = pendingImage;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    const rm = document.createElement('div');
+                    rm.innerText = '✕';
+                    rm.style.position = 'absolute';
+                    rm.style.top = '2px';
+                    rm.style.right = '2px';
+                    rm.style.background = 'rgba(0,0,0,0.7)';
+                    rm.style.borderRadius = '20px';
+                    rm.style.width = '16px';
+                    rm.style.height = '16px';
+                    rm.style.display = 'flex';
+                    rm.style.alignItems = 'center';
+                    rm.style.justifyContent = 'center';
+                    rm.style.fontSize = '10px';
+                    rm.style.cursor = 'pointer';
+                    rm.style.color = 'white';
+                    rm.onclick = () => { pendingImage = null; previewElement.remove(); previewElement = null; };
+                    previewElement.appendChild(img);
+                    previewElement.appendChild(rm);
+                    previewDiv.appendChild(previewElement);
+                    showToast("Imagen lista", false);
+                };
+                reader.readAsDataURL(file);
+            };
+            fileInput.click();
+        };
+        
+        textInput.addEventListener('paste', (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    if (file.size > 10 * 1024 * 1024) { showToast("Imagen >10MB", true); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        pendingImage = ev.target.result;
+                        if(previewElement) previewElement.remove();
+                        previewElement = document.createElement('div');
+                        previewElement.style.position = 'relative';
+                        previewElement.style.width = '60px';
+                        previewElement.style.height = '60px';
+                        previewElement.style.borderRadius = '8px';
+                        previewElement.style.overflow = 'hidden';
+                        previewElement.style.border = '1px solid var(--border-subtle)';
+                        const img = document.createElement('img');
+                        img.src = pendingImage;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        const rm = document.createElement('div');
+                        rm.innerText = '✕';
+                        rm.style.position = 'absolute';
+                        rm.style.top = '2px';
+                        rm.style.right = '2px';
+                        rm.style.background = 'rgba(0,0,0,0.7)';
+                        rm.style.borderRadius = '20px';
+                        rm.style.width = '16px';
+                        rm.style.height = '16px';
+                        rm.style.display = 'flex';
+                        rm.style.alignItems = 'center';
+                        rm.style.justifyContent = 'center';
+                        rm.style.fontSize = '10px';
+                        rm.style.cursor = 'pointer';
+                        rm.style.color = 'white';
+                        rm.onclick = () => { pendingImage = null; previewElement.remove(); previewElement = null; };
+                        previewElement.appendChild(img);
+                        previewElement.appendChild(rm);
+                        previewDiv.appendChild(previewElement);
+                        showToast("Imagen lista para enviar", false);
+                    };
+                    reader.readAsDataURL(file);
+                    e.preventDefault();
+                    break;
+                }
+            }
+        });
+        
+        sendBtn.onclick = async () => {
+            const texto = textInput.value.trim();
+            if(!texto && !pendingImage) { showToast("Escribe algo o adjunta imagen", true); return; }
+            await addReplyToComment(taskId, commentId, texto, pendingImage);
+            textInput.value = "";
+            pendingImage = null;
+            if(previewElement) previewElement.remove();
+            form.remove();
+            setTimeout(() => renderFeed(), 200);
+        };
+        commentElement.appendChild(form);
+        textInput.focus();
+    }
+    window.showReplyForm = showReplyForm;
+    window.deleteReply = function(taskId, parentCommentId, replyId) {
+        showConfirmModal("¿Eliminar respuesta?", async () => {
+            await db.ref(`tasks/${taskId}/comments/${parentCommentId}/replies/${replyId}`).remove();
+            renderFeed();
+        });
+    };
+    
+    function createReplyHtml(reply, replyId, taskId, parentCommentId) {
+        const canDelete = (reply.u === currentUser || isAdmin);
+        let media = '';
+        if(reply.img) media = `<img src="${reply.img}" class="reply-img" onclick="openImageViewer('${reply.img}')">`;
+        return `<div class="reply-item" data-reply-id="${replyId}">
+            <div style="display:flex; justify-content:space-between;">
+                <div><span style="font-size:10px; color:var(--truper-light);">${escapeHtml(reply.u)} • ${reply.t}</span>
+                <div style="margin-top:4px;">${escapeHtml(reply.v||'')}</div>${media}</div>
+                ${canDelete ? `<button class="delete-comment" onclick="deleteReply('${taskId}','${parentCommentId}','${replyId}')">🗑️</button>` : ''}
+            </div>
+        </div>`;
+    }
+    function buildCommentHtml(taskId, comment, commentId) {
+        let repliesHtml = '';
+        const replies = comment.replies ? Object.entries(comment.replies) : [];
+        replies.sort((a,b)=>a[1].ts - b[1].ts);
+        replies.forEach(([rid, r]) => repliesHtml += createReplyHtml(r, rid, taskId, commentId));
+        const canDelete = (comment.u === currentUser || isAdmin);
+        let commentImg = '';
+        if(comment.img) commentImg = `<img src="${comment.img}" class="comment-img" onclick="openImageViewer('${comment.img}')">`;
+        return `<div class="comment-item" data-comment-id="${commentId}">
+            <div style="flex:1;">
+                <div style="font-size:11px; color:var(--truper-light); font-weight:600;">${escapeHtml(comment.u)} • ${comment.t}</div>
+                <div style="font-size:13px; margin-top:4px;">${escapeHtml(comment.v||'')}</div>${commentImg}
+                ${repliesHtml}
+                <div><button class="reply-btn" onclick="showReplyForm('${taskId}','${commentId}', this.closest('.comment-item'))">💬 Responder</button></div>
+            </div>
+            ${canDelete ? `<button class="delete-comment" onclick="deleteComment('${taskId}','${commentId}')">🗑️</button>` : ''}
+        </div>`;
+    }
+    
+    function createTaskCard(tid, task, onlineUsersSet) {
+        const upC = task.ups ? Object.keys(task.ups).length : 0, downC = task.downs ? Object.keys(task.downs).length : 0;
+        const liked = task.ups && task.ups[currentUser], disliked = task.downs && task.downs[currentUser];
+        const comments = task.comments ? Object.values(task.comments) : [];
+        const history = (task.history || []).sort((a,b)=>(a.ts||0)-(b.ts||0));
+        const isOwner = task.u === currentUser;
+        const canDelete = isOwner || isAdmin;
+        let mediaHtml = '';
+        if(task.mediaFiles && task.mediaFiles.length){
+            mediaHtml = `<div class="media-preview-grid">`;
+            task.mediaFiles.forEach(f=>{
+                const isImg = f.type && f.type.startsWith('image/');
+                const fn = isImg ? `openImageViewer('${f.dataURL}')` : `openFileInNewTab('${f.dataURL}','${f.name}')`;
+                mediaHtml += `<div class="media-preview-item" onclick="${fn}">${isImg ? `<img src="${f.dataURL}" style="width:100%;height:100%;object-fit:cover;">` : '<span class="file-icon" style="font-size:28px;">📄</span>'}</div>`;
+            });
+            mediaHtml += `</div>`;
+        }
+        const statusBtns = ['Iniciado','Proceso','Finalizado'].map(st=>`<div onclick="updateTaskStatus('${tid}','${st}')" class="nav-pill status-btn ${task.st===st?'active':''}" style="flex:1; text-align:center; margin:0 4px; padding:6px 0;">${st}</div>`).join('');
+        let commentsHtml = `<div class="comment-section"><div class="comment-toggle" onclick="toggleComments('c-${tid}')">💬 Comentarios <span class="comment-count">${comments.length}</span></div><div id="c-${tid}" class="comment-thread"><div>`;
+        comments.forEach((c, idx)=>{
+            const cid = Object.keys(task.comments)[idx];
+            commentsHtml += buildCommentHtml(tid, c, cid);
+        });
+        commentsHtml += `</div><div class="comment-input-wrapper"><input id="comment-input-${tid}" placeholder="Escribe un comentario... (Ctrl+V para pegar imagen)"><div id="comment-preview-${tid}" style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;"></div><button onclick="addCommentWithImage('${tid}')">→</button></div></div></div>`;
+        const historyBtn = `<div class="history-button" onclick="showTaskHistory('${tid}')">📋 Historial (${history.length})</div>`;
+        const delBtn = canDelete ? `<span onclick="openDeleteModal('${tid}')" style="color:var(--red); background:rgba(229,72,77,0.12); padding:5px 14px; border-radius:40px; cursor:pointer;">Eliminar</span>` : '';
+        const isOnline = onlineUsersSet ? onlineUsersSet.has(task.u) : false;
+        const onlineDot = isOnline ? '<span class="online-indicator"></span>' : '';
+        const div = document.createElement('div');
+        div.className = "glass-card";
+        div.style.padding = "18px";
+        div.style.marginBottom = "20px";
+        div.id = `task-${tid}`;
+        div.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:14px;"><div><span style="font-weight:700; background:rgba(224,112,0,0.12); padding:4px 14px; border-radius:40px;">${escapeHtml(task.u)}${onlineDot}</span> <span style="font-size:12px; margin-left:8px; opacity:0.5;">${new Date(task.ts).toLocaleString()}</span></div><div style="font-size:13px; font-weight:600;">${escapeHtml(task.r)}</div></div>${mediaHtml}<p style="font-size:15px; margin-bottom:16px;">${escapeHtml(task.txt||'')}</p><div style="display:flex; gap:10px; margin-bottom:16px;">${statusBtns}</div><div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;"><div style="display:flex; gap:14px;"><span onclick="toggleReaction('${tid}','ups')" class="like-btn ${liked?'active':''}">👍 ${upC}</span><span onclick="toggleReaction('${tid}','downs')" class="dislike-btn ${disliked?'active':''}">👎 ${downC}</span></div>${historyBtn}${delBtn}</div>${commentsHtml}`;
+        
+        setTimeout(() => {
+            const input = document.getElementById(`comment-input-${tid}`);
+            const previewDiv = document.getElementById(`comment-preview-${tid}`);
+            if(input) {
+                let pendingImage = null;
+                let previewElement = null;
+                input.addEventListener('paste', (e) => {
+                    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                    for (let item of items) {
+                        if (item.type.indexOf('image') !== -1) {
+                            const file = item.getAsFile();
+                            if (file.size > 10 * 1024 * 1024) { showToast("Imagen >10MB", true); return; }
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                                pendingImage = ev.target.result;
+                                if(previewElement) previewElement.remove();
+                                previewElement = document.createElement('div');
+                                previewElement.style.position = 'relative';
+                                previewElement.style.width = '60px';
+                                previewElement.style.height = '60px';
+                                previewElement.style.borderRadius = '8px';
+                                previewElement.style.overflow = 'hidden';
+                                previewElement.style.border = '1px solid var(--border-subtle)';
+                                const img = document.createElement('img');
+                                img.src = pendingImage;
+                                img.style.width = '100%';
+                                img.style.height = '100%';
+                                img.style.objectFit = 'cover';
+                                const rm = document.createElement('div');
+                                rm.innerText = '✕';
+                                rm.style.position = 'absolute';
+                                rm.style.top = '2px';
+                                rm.style.right = '2px';
+                                rm.style.background = 'rgba(0,0,0,0.7)';
+                                rm.style.borderRadius = '20px';
+                                rm.style.width = '16px';
+                                rm.style.height = '16px';
+                                rm.style.display = 'flex';
+                                rm.style.alignItems = 'center';
+                                rm.style.justifyContent = 'center';
+                                rm.style.fontSize = '10px';
+                                rm.style.cursor = 'pointer';
+                                rm.style.color = 'white';
+                                rm.onclick = () => { pendingImage = null; previewElement.remove(); previewElement = null; };
+                                previewElement.appendChild(img);
+                                previewElement.appendChild(rm);
+                                previewDiv.appendChild(previewElement);
+                                showToast("Imagen lista para comentario", false);
+                            };
+                            reader.readAsDataURL(file);
+                            e.preventDefault();
+                            break;
+                        }
+                    }
+                });
+                window[`commentImage_${tid}`] = { get: () => pendingImage, clear: () => { pendingImage = null; if(previewElement) previewElement.remove(); previewElement = null; } };
+            }
+        }, 50);
+        return div;
+    }
+    
+    window.addCommentWithImage = function(tid) {
+        const inp = document.getElementById(`comment-input-${tid}`);
+        const imgData = window[`commentImage_${tid}`] ? window[`commentImage_${tid}`].get() : null;
+        if(inp && inp.value.trim() || imgData) {
+            const txt = inp.value.trim();
+            db.ref(`tasks/${tid}/comments`).push({u:currentUser, v:txt, t:new Date().toLocaleTimeString(), ts:Date.now(), img: imgData || null});
+            inp.value = "";
+            if(window[`commentImage_${tid}`]) window[`commentImage_${tid}`].clear();
+            playCommentSound();
+            const t = tasksDB[tid];
+            if(t && t.u !== currentUser) addNotification({title:"Comentario", message:`${currentUser} comentó: "${txt.substring(0,50)}"`});
+            renderFeed();
+        } else showToast("Escribe algo o pega una imagen", true);
+    };
+    
+    async function renderFeed(){ if(!feedDiv) return; const sc=document.getElementById('main-container'), prev=sc?sc.scrollTop:0; feedDiv.innerHTML=""; const filt=Object.entries(tasksDB).filter(([_,t])=>t.a===currentArea); if(filt.length===0){ feedDiv.innerHTML=`<div class="glass-card" style="padding:40px; text-align:center;">Sin reportes en ${currentArea}</div>`; return; } filt.sort((a,b)=>b[1].ts-a[1].ts); const online=await getOnlineUsers(); for(const [tid,t] of filt) feedDiv.appendChild(createTaskCard(tid,t,online)); if(sc) sc.scrollTop=prev; }
+    async function getOnlineUsers(){ const snap=await db.ref('presence').once('value'); const set=new Set(); const now=Date.now(); snap.forEach(c=>{ const d=c.val(); if(d && d.online===true && (now-d.lastSeen)<60000) set.add(c.key); }); return set; }
+    function updateAreaNavCounters(){ const pills=document.querySelectorAll('#area-tabs .nav-pill'), cnts={}; for(const tid in tasksDB) cnts[tasksDB[tid].a]=(cnts[tasksDB[tid].a]||0)+1; pills.forEach(p=>{ const an=p.innerText.split('(')[0].trim(); p.innerHTML=`${an} <span style="font-size:11px;">(${cnts[an]||0})</span>`; }); }
+    function buildAreaNav(){ const c=document.getElementById('area-tabs'); c.innerHTML=""; DEPARTMENTS.forEach(area=>{ const p=document.createElement('div'); p.className=`nav-pill ${area===currentArea?'active':''}`; const cnt=Object.values(tasksDB).filter(t=>t.a===area).length; p.innerHTML=`${area} <span style="font-size:11px;">(${cnt})</span>`; p.onclick=()=>{ currentArea=area; buildAreaNav(); renderFeed(); updateAreaChartAndCounter(); }; c.appendChild(p); }); setTimeout(()=>{ const act=c.querySelector('.active'); if(act) act.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); },50); }
+    async function updateAreaChartAndCounter(){ const areaT=Object.values(tasksDB).filter(t=>t.a===currentArea); const total=areaT.length, comp=areaT.filter(t=>t.st==='Finalizado').length, pct=total===0?0:Math.round((comp/total)*100); document.getElementById('task-counter').innerHTML=`${comp} de ${total}`; document.getElementById('chart-percent-text').innerText=pct+"%"; const ctx=document.getElementById('areaChartCanvas').getContext('2d'); const grad=ctx.createLinearGradient(0,0,100,100); if(pct===100) grad.addColorStop(0,'#1B5E20'),grad.addColorStop(1,'#66BB6A'); else if(pct>=70) grad.addColorStop(0,'#E07000'),grad.addColorStop(0.7,'#F09C3E'),grad.addColorStop(1,'#4CAF50'); else grad.addColorStop(0,'#B85C00'),grad.addColorStop(1,'#E07000'); if(chartInstance){ chartInstance.data.datasets[0].data=[pct,100-pct]; chartInstance.data.datasets[0].backgroundColor=[grad,'rgba(255,255,255,0.04)']; chartInstance.update(); }else{ chartInstance=new Chart(ctx,{ type:'doughnut', data:{datasets:[{data:[pct,100-pct],backgroundColor:[grad,'rgba(255,255,255,0.04)'],borderWidth:0,cutout:'80%'}]}, options:{plugins:{tooltip:{enabled:false},legend:{display:false}} } }); } }
+    function setupRealtimeSync(){ db.ref('tasks').on('child_added',(s)=>{ const t=s.val(); if(!t) return; tasksDB[s.key]=t; if(t.a===currentArea) renderFeed(); updateAreaChartAndCounter(); updateAreaNavCounters(); }); db.ref('tasks').on('child_changed',(s)=>{ const t=s.val(); if(!t) return; tasksDB[s.key]=t; if(t.a===currentArea){ const old=document.getElementById(`task-${s.key}`); if(old){ const nue=createTaskCard(s.key,t,null); old.parentNode.replaceChild(nue,old); } } updateAreaChartAndCounter(); updateAreaNavCounters(); }); db.ref('tasks').on('child_removed',(s)=>{ delete tasksDB[s.key]; const card=document.getElementById(`task-${s.key}`); if(card) card.remove(); updateAreaChartAndCounter(); updateAreaNavCounters(); }); }
+    window.updateTaskStatus=function(tid,ns){ const t=tasksDB[tid]; if(t&&t.st!==ns){ const log=t.history?[...t.history]:[]; log.push({u:currentUser,st:ns,t:new Date().toLocaleTimeString(),ts:Date.now()}); db.ref(`tasks/${tid}`).update({st:ns,history:log}); if(t.u!==currentUser) addNotification({title:"Estado",message:`${currentUser} cambió estado a "${ns}"`}); renderFeed(); } };
+    window.toggleReaction=function(tid,type){ const t=tasksDB[tid]; if(!t) return; const isLike=type==='ups'; const ref=db.ref(`tasks/${tid}/${type}/${currentUser}`); const oppRef=db.ref(`tasks/${tid}/${isLike?'downs':'ups'}/${currentUser}`); if(t[type]&&t[type][currentUser]){ ref.remove(); playDislikeSound(); }else{ ref.set(true); oppRef.remove(); playLikeSound(); if(t.u!==currentUser) addNotification({title:isLike?"Me gusta":"No me gusta",message:`${currentUser} ${isLike?'👍 le gusta':'👎 no le gusta'} tu publicación`}); } renderFeed(); };
+    window.deleteComment=function(tid,cid){ deleteCommentTarget={taskId:tid,commentId:cid}; document.getElementById('delete-comment-modal').style.display='flex'; };
+    window.closeDeleteCommentModal=function(){ document.getElementById('delete-comment-modal').style.display='none'; deleteCommentTarget={}; };
+    window.confirmDeleteComment=function(){ if(deleteCommentTarget.taskId && deleteCommentTarget.commentId){ db.ref(`tasks/${deleteCommentTarget.taskId}/comments/${deleteCommentTarget.commentId}`).remove().then(()=>renderFeed()); } closeDeleteCommentModal(); };
+    document.getElementById('confirm-delete-comment-btn').onclick=()=>window.confirmDeleteComment();
+    window.openDeleteModal=function(id){ deleteTargetId=id; document.getElementById('delete-modal').style.display='flex'; };
+    window.closeDeleteModal=function(){ document.getElementById('delete-modal').style.display='none'; deleteTargetId=null; };
+    document.getElementById('confirm-delete-btn').onclick=()=>{ if(deleteTargetId) db.ref(`tasks/${deleteTargetId}`).remove(); closeDeleteModal(); };
+    window.toggleComments=function(id){ document.getElementById(id)?.classList.toggle('open'); };
+    window.showTaskHistory=function(tid){ const t=tasksDB[tid]; if(!t||!t.history) return; const modal=document.getElementById('history-modal'), cont=document.getElementById('history-modal-content'); cont.innerHTML=''; (t.history||[]).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(h=>{ const d=document.createElement('div'); d.style.padding='10px'; d.style.borderBottom='1px solid rgba(255,255,255,0.05)'; d.innerHTML=`<span style="color:var(--truper-light);">${escapeHtml(h.st)}</span> - ${escapeHtml(h.u)} <span style="float:right;">${escapeHtml(h.t)}</span>`; cont.appendChild(d); }); modal.style.display='flex'; };
+    window.closeHistoryModal=()=>document.getElementById('history-modal').style.display='none';
+    window.openImageViewer=function(src){ const v=document.getElementById('imageViewer'), i=document.getElementById('viewerImage'); i.src=src; i.classList.remove('zoomed'); v.style.display='flex'; const downloadBtn = document.getElementById('downloadImageBtn'); downloadBtn.onclick = () => { const link = document.createElement('a'); link.href = src; link.download = 'imagen.png'; link.click(); }; v.onclick=(e)=>{ if(e.target===v) closeImageViewer(); }; i.onclick=(e)=>{ e.stopPropagation(); i.classList.toggle('zoomed'); }; };
+    window.closeImageViewer=function(){ document.getElementById('imageViewer').style.display='none'; };
+    window.openFileInNewTab=function(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; a.target='_blank'; a.click(); };
+    function publishTask(){ const txt=document.getElementById('new-task-text').value.trim(); if(!txt && selectedFiles.length===0){ showToast("Escribe algo o adjunta archivo",true); return; } const newId=db.ref('tasks').push().key; const media=selectedFiles.map(f=>({dataURL:f.dataURL,type:f.type,name:f.name})); const hist=[{u:currentUser,st:'Iniciado',t:new Date().toLocaleTimeString(),ts:Date.now()}]; db.ref(`tasks/${newId}`).set({u:currentUser,r:currentRole,a:currentArea,txt:txt,mediaFiles:media,st:'Iniciado',ts:Date.now(),history:hist,ups:{},downs:{},comments:{}}).then(()=>{ document.getElementById('new-task-text').value=""; resetMediaSelection(); showToast("Publicado",false); playPublishSound(); }); }
+    
+    // ==================== LOGIN CON MANEJO DE ERRORES ====================
+    let selectedRole = DEPARTMENTS[0];
+    function buildRoleSelector(){ const c=document.getElementById('reg-role-selector'); c.innerHTML=''; DEPARTMENTS.forEach(r=>{ const d=document.createElement('div'); d.className='role-option'; d.innerText=r; d.onclick=()=>{ document.querySelectorAll('.role-option').forEach(o=>o.classList.remove('selected')); d.classList.add('selected'); selectedRole=r; }; c.appendChild(d); }); if(c.firstChild) c.firstChild.classList.add('selected'); }
+    function switchAuthTab(tab){ document.getElementById('tab-login').classList.toggle('active',tab==='login'); document.getElementById('tab-register').classList.toggle('active',tab==='register'); document.getElementById('login-form').classList.toggle('active',tab==='login'); document.getElementById('register-form').classList.toggle('active',tab==='register'); }
+    window.togglePasswordVisibility=function(i,b){ const inp=document.getElementById(i); if(inp.type==='password'){ inp.type='text'; b.textContent='🙈'; }else{ inp.type='password'; b.textContent='👁️'; } };
+    async function registerUser(){ const u=document.getElementById('reg-username').value.trim().toUpperCase(), p=document.getElementById('reg-password').value.trim(); if(!u||!p){ showToast("Complete campos",true); return; } if(u.length<3){ showToast("Usuario mínimo 3 caracteres",true); return; } if(p.length<4){ showToast("Contraseña mínimo 4",true); return; } const ex=await db.ref(`users/${u}`).once('value'); if(ex.exists()){ showToast("Usuario ya existe",true); return; } await db.ref(`users/${u}`).set({password:p,role:selectedRole,created:Date.now()}); showToast(`✅ Usuario ${u} registrado`,false); document.getElementById('reg-username').value=''; document.getElementById('reg-password').value=''; switchAuthTab('login'); document.getElementById('login-username').value=u; document.getElementById('login-password').focus(); }
+    async function loginUser(){ const u=document.getElementById('login-username').value.trim().toUpperCase(), p=document.getElementById('login-password').value.trim(); if(!u||!p){ showToast("Ingrese usuario y contraseña",true); return; } 
+        try {
+            if(u==='ADMIN' && p==='admin123'){ 
+                const ar=db.ref(`users/ADMIN`); if(!(await ar.once('value')).exists()) await ar.set({password:'admin123',role:'ADMINISTRADOR',created:Date.now()}); 
+                currentUser='ADMIN'; currentRole='ADMINISTRADOR'; currentArea='GERENTE'; isAdmin=true; saveUserName('ADMIN'); document.getElementById('admin-panel-container').style.display='flex'; playPatternSuccess(); completeLogin(); return; 
+            }
+            if(u==='BACKUP' && p==='backup123'){ 
+                const br=db.ref(`users/BACKUP`); if(!(await br.once('value')).exists()) await br.set({password:'backup123',role:'BACKUP',created:Date.now()}); 
+                currentUser='BACKUP'; currentRole='BACKUP'; currentArea='GERENTE'; isAdmin=false; saveUserName('BACKUP'); document.getElementById('admin-panel-container').style.display='none'; playPatternSuccess(); completeLogin(); return; 
+            }
+            const snap=await db.ref(`users/${u}`).once('value'); if(!snap.exists()){ showToast("Usuario no registrado",true); return; } const d=snap.val(); if(d.password===p){ currentUser=u; currentRole=d.role||"GERENTE"; currentArea=currentRole==='ADMINISTRADOR'?'GERENTE':currentRole; isAdmin=(currentRole==='ADMINISTRADOR'); saveUserName(u); document.getElementById('admin-panel-container').style.display=isAdmin?'flex':'none'; playPatternSuccess(); completeLogin(); }else{ showToast("Contraseña incorrecta",true); }
+        } catch(err) { console.error("Error en login:", err); showToast("Error de conexión", true); }
+    }
+    function completeLogin(){ const lc=document.getElementById('login-card'); lc.classList.add('zoom-out-effect'); setTimeout(()=>{ loginScreen.style.display='none'; mainContainer.style.display='block'; lc.classList.remove('zoom-out-effect'); document.getElementById('header-subtitle').innerHTML=`${currentUser} • ${currentRole}`; loadNotifications(); initPushNotifications().catch(e=>console.warn("Push no iniciado:", e)); setupRealtimeSync(); db.ref('tasks').once('value',async(s)=>{ tasksDB=s.val()||{}; await renderFeed(); updateAreaChartAndCounter(); buildAreaNav(); }); resetInactivityTimer(); initPresence(); document.addEventListener('click',closePopupOnClickOutside); document.getElementById('bell-icon').onclick=e=>{ e.stopPropagation(); toggleNotificationPopup(); }; },200); }
+    async function initPresence(){ if(!currentUser) return; presenceRef=db.ref(`presence/${currentUser}`); presenceRef.onDisconnect().set({online:false,lastSeen:Date.now()}); await presenceRef.set({online:true,lastSeen:Date.now()}); setInterval(async()=>{ if(currentUser) await presenceRef.update({online:true,lastSeen:Date.now()}); },30000); }
+    function resetInactivityTimer(){ if(inactivityTimer) clearTimeout(inactivityTimer); inactivityTimer=setTimeout(()=>{ if(mainContainer.style.display==='block'){ showToast("Sesión expirada (40 min)",true); logoutWithAnimation(); } },SESSION_TIMEOUT); }
+    async function logoutWithAnimation(){ mainContainer.classList.add('tv-off-effect'); setTimeout(async()=>{ if(inactivityTimer) clearTimeout(inactivityTimer); if(presenceRef) await presenceRef.set({online:false,lastSeen:Date.now()}); if(currentUser) await db.ref(`push_tokens/${currentUser}`).remove(); currentUser=""; isAdmin=false; loginScreen.style.display='flex'; mainContainer.style.display='none'; mainContainer.classList.remove('tv-off-effect'); db.ref('tasks').off(); if(notificationsRef) notificationsRef.off(); document.removeEventListener('click',closePopupOnClickOutside); document.getElementById('login-username').value=''; document.getElementById('login-password').value=''; document.getElementById('admin-panel-container').style.display='none'; },250); }
+    
+    const loginScreen=document.getElementById('login-screen'), mainContainer=document.getElementById('main-container'), feedDiv=document.getElementById('feed-container');
+    buildRoleSelector(); document.getElementById('do-login-btn').onclick=loginUser; document.getElementById('do-register-btn').onclick=registerUser; document.getElementById('login-username').value=loadUserName();
+    
+    // Fondo partículas
+    const bgCanvas=document.getElementById('bg-canvas'), bgCtx=bgCanvas.getContext('2d'); let particles=[], mouseX=-200,mouseY=-200;
+    function initParticles(){ bgCanvas.width=window.innerWidth; bgCanvas.height=window.innerHeight; particles=[]; for(let i=0;i<50;i++) particles.push({x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height,vx:(Math.random()-0.5)*0.2,vy:(Math.random()-0.5)*0.2,radius:Math.random()*2+1,alpha:Math.random()*0.4+0.2}); }
+    function drawBackground(){ if(!bgCtx) return; bgCtx.fillStyle='rgba(0,0,0,0.08)'; bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height); for(let i=0;i<particles.length;i++){ const p=particles[i]; p.x+=p.vx; if(p.x<0) p.x=bgCanvas.width; if(p.x>bgCanvas.width) p.x=0; p.y+=p.vy; if(p.y<0) p.y=bgCanvas.height; if(p.y>bgCanvas.height) p.y=0; bgCtx.beginPath(); bgCtx.arc(p.x,p.y,p.radius,0,Math.PI*2); bgCtx.fillStyle=`rgba(224,112,0,${p.alpha+Math.sin(Date.now()*0.002+p.x)*0.1})`; bgCtx.fill(); for(let j=i+1;j<particles.length;j++){ const p2=particles[j]; const d=Math.hypot(p.x-p2.x,p.y-p2.y); if(d<100){ bgCtx.beginPath(); bgCtx.moveTo(p.x,p.y); bgCtx.lineTo(p2.x,p2.y); bgCtx.strokeStyle=`rgba(224,112,0,0.06-d/1400)`; bgCtx.lineWidth=0.6; bgCtx.stroke(); } } const dm=Math.hypot(p.x-mouseX,p.y-mouseY); if(dm<120){ bgCtx.beginPath(); bgCtx.moveTo(p.x,p.y); bgCtx.lineTo(mouseX,mouseY); bgCtx.strokeStyle=`rgba(224,112,0,0.15)`; bgCtx.lineWidth=0.8; bgCtx.stroke(); } } requestAnimationFrame(drawBackground); }
+    window.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY;}); window.addEventListener('touchmove',e=>{if(e.touches[0]){mouseX=e.touches[0].clientX;mouseY=e.touches[0].clientY;}}); window.addEventListener('resize',()=>{initParticles();}); initParticles(); drawBackground();
+</script>
+</body>
+</html>
